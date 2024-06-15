@@ -1,0 +1,51 @@
+{% macro render_book_form(url, genres, genres_count, book=None, publish_year=None) %}
+
+<form action="{{ url }}" method="POST" class="row g-3" enctype="multipart/form-data">
+    <div class="col-md-6">
+        <label for="book_title" class="form-label">Название</label>
+        <input type="text" class="form-control" name="book_title" id="book_title" value="{{ book.name or '' }}" autocomplete="off">
+    </div>
+    <div class="col-md-6">
+        <label for="book_author" class="form-label">Автор</label>
+        <input type="text" class="form-control" name="book_author" id="book_author" value="{{ book.author or '' }}" autocomplete="off">
+    </div>
+    <div class="col-12">
+        <label for="book_short_description" class="form-label">Полное описание</label>
+        <textarea class="form-control" name="book_short_description" id="book_short_description" rows="5">{{ book.short_desc or '' }}</textarea>
+    </div>
+    <div class="col-md-6">
+        <label for="book_publisher" class="form-label">Издатель</label>
+        <input type="text" class="form-control" name="book_publisher" id="book_publisher" value="{{ book.publisher or '' }}" autocomplete="off">
+    </div>
+    <div class="col-md-3">
+        <label for="book_publish_year" class="form-label">Год издания</label>
+        <input type="number" class="form-control" name="book_publish_year" id="book_publish_year" value="{{ publish_year or '' }}">
+    </div>
+    <div class="col-md-3">
+        <label for="book_volume" class="form-label">Объём в страницах</label>
+        <input type="number" class="form-control" name="book_volume" id="book_volume" value="{{ book.size or '' }}" autocomplete="off">
+    </div>
+    <div class="col-12">
+        <label for="book_genres" class="form-label">Жанры</label>
+        <select class="form-select" size="{{ genres_count }}" name="book_genres" id="book_genres" multiple>
+            {% for genre in genres %}
+            <option value="{{ genre.id }}" {% if genre in book.genres %} selected {% endif %}>{{ genre.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if request.endpoint == 'books.create' %}
+    <div class="col-12">
+        <label for="book_img" class="form-label">Обложка книги</label>
+        <input class="form-control" type="file" id="book_img" name="book_img" accept=".jpg,.png">
+    </div>
+    {% endif %}
+
+    <div class="col-12 text-center">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+    </div>
+</form>
+
+<script defer src="{{ url_for('static', filename='mde.js') }}"></script>
+
+{% endmacro %}

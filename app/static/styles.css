@@ -1,0 +1,17 @@
+.logo {
+    max-width: 175px;
+}
+
+.profile {
+    max-width: 45px;
+}
+
+.collection_button_td{
+    display: flex;
+    flex-flow: row wrap;
+    
+}
+
+.collection_button_td > div{
+    margin: 0 auto;
+}
