@@ -11,163 +11,133 @@ from tools import ImageSaver
 
 book_bp = Blueprint('books', __name__, url_prefix='/books')
 
-
 @book_bp.route('/<int:book_id>')
 def show(book_id):
-    book = Book.query.get(book_id)
-    image = Cover.query.filter(Cover.book_id == book_id).first()
-    return render_template('book/show.html', book=book, image=image)
-
+    selected_book = Book.query.get(book_id)
+    associated_image = Cover.query.filter(Cover.book_id == book_id).first()
+    return render_template('book/show.html', book=selected_book, image=associated_image)
 
 @book_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 @check_rights('create_book')
 def create():
-    genres = Category.query.all()
-    genres_count = len(genres)
-    
+    available_genres = Category.query.all()
+    number_of_genres = len(available_genres)
+
     if request.method == 'POST':
         try:
-            book = Book()
-            book.name = bleach.clean(request.form.get('book_title'))
-            book.short_desc = bleach.clean(request.form.get('book_short_description'))
-            book.author = bleach.clean(request.form.get('book_author'))
-            book.publisher = bleach.clean(request.form.get('book_publisher'))
-            book.publisher_year = request.form.get('book_publish_year')
-            book.size = request.form.get('book_volume')
-
+            new_book = Book(
+                name=bleach.clean(request.form.get('book_title')),
+                short_desc=bleach.clean(request.form.get('book_short_description')),
+                author=bleach.clean(request.form.get('book_author')),
+                publisher=bleach.clean(request.form.get('book_publisher')),
+                publisher_year=request.form.get('book_publish_year'),
+                size=request.form.get('book_volume')
+            )
+            
             for genre_id in request.form.getlist('book_genres'):
                 genre = Category.query.get(genre_id)
-                book.genres.append(genre)
-            db.session.add(book)
+                new_book.genres.append(genre)
 
-            f = request.files.get('book_img')
-            if f and f.filename:
-                ImageSaver(f, book).save()
+            db.session.add(new_book)
+
+            file = request.files.get('book_img')
+            if file and file.filename:
+                ImageSaver(file, new_book).save()
 
             db.session.commit()
 
             flash('Книга успешно добавлена.', 'success')
-            return redirect(url_for('books.show', book_id=book.id))
+            return redirect(url_for('books.show', book_id=new_book.id))
         except Exception as e:
-            print(e, '=============================================================')
+            print(e)
             db.session.rollback()
-            flash(
-                'При сохранении данных возникла ошибка. Проверьте корректность введённых данных.', 'warning')
-            return render_template(
-                'book/create.html',
-                genres=genres,
-                genres_count=genres_count,
-                book=book)
+            flash('При сохранении данных возникла ошибка. Проверьте корректность введённых данных.', 'warning')
+            return render_template('book/create.html', genres=available_genres, genres_count=number_of_genres, book=new_book)
 
-    return render_template(
-        'book/create.html',
-        genres=genres,
-        genres_count=genres_count,
-        book=None)
-
+    return render_template('book/create.html', genres=available_genres, genres_count=number_of_genres, book=None)
 
 @book_bp.route('/<int:book_id>/edit', methods=['GET', 'POST'])
 @login_required
 @check_rights('update_book')
 def edit(book_id):
-    genres = Category.query.all()
-    genres_count = len(genres)
+    all_genres = Category.query.all()
+    count_genres = len(all_genres)
 
-    book = Book.query.get(book_id)
-    image = Cover.query.filter(Cover.book_id == book_id).first()
+    selected_book = Book.query.get(book_id)
+    book_image = Cover.query.filter(Cover.book_id == book_id).first()
     if request.method == 'POST':
         try:
-            book.name = bleach.clean(request.form.get('book_title'))
-            book.short_desc = bleach.clean(request.form.get('book_short_description'))
-            book.author = bleach.clean(request.form.get('book_author'))
-            book.publisher = bleach.clean(request.form.get('book_publisher'))
-            book.publisher_year = request.form.get('book_publish_year')
-            book.size = request.form.get('book_volume')
+            selected_book.name = bleach.clean(request.form.get('book_title'))
+            selected_book.short_desc = bleach.clean(request.form.get('book_short_description'))
+            selected_book.author = bleach.clean(request.form.get('book_author'))
+            selected_book.publisher = bleach.clean(request.form.get('book_publisher'))
+            selected_book.publisher_year = request.form.get('book_publish_year')
+            selected_book.size = request.form.get('book_volume')
 
-            genre_list = []
-            for genre_id in request.form.getlist('book_genres'):
-                genre = Category.query.get(genre_id)
-                genre_list.append(genre)
+            selected_book.genres = [Category.query.get(genre_id) for genre_id in request.form.getlist('book_genres')]
 
-            book.genres = genre_list
-
-            db.session.add(book)
-
+            db.session.add(selected_book)
             db.session.commit()
 
             flash('Книга успешно обновлена.', 'success')
-            return render_template('book/show.html', book=book, image=image)
-        except:
+            return render_template('book/show.html', book=selected_book, image=book_image)
+        except Exception:
             db.session.rollback()
-            flash(
-                'При сохранении данных возникла ошибка. Проверьте корректность введённых данных.', 'warning')
-            return render_template(
-                'book/edit.html',
-                genres=genres,
-                genres_count=genres_count,
-                book=book,
-                publish_year=book.publisher_year)
+            flash('При сохранении данных возникла ошибка. Проверьте корректность введённых данных.', 'warning')
+            return render_template('book/edit.html', genres=all_genres, genres_count=count_genres, book=selected_book, publish_year=selected_book.publisher_year)
 
-    return render_template(
-        'book/edit.html',
-        genres=genres,
-        genres_count=genres_count,
-        book=book,
-        publish_year=book.publisher_year)
-
+    return render_template('book/edit.html', genres=all_genres, genres_count=count_genres, book=selected_book, publish_year=selected_book.publisher_year)
 
 @book_bp.route('/<int:book_id>/delete', methods=['POST'])
 @login_required
 @check_rights('delete_book')
 def delete(book_id):
     try:
-        book = Book.query.get(book_id)
-        image = Cover.query.filter(Cover.book_id == book_id).first()
+        book_to_delete = Book.query.get(book_id)
+        cover_image = Cover.query.filter(Cover.book_id == book_id).first()
 
-        if image:
-            path_to_img = os.path.join(
-                app.config['UPLOAD_FOLDER'], image.storage_filename)
+        if cover_image:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], cover_image.storage_filename)
 
-        book.genres.clear()
-        db.session.delete(book)
+        book_to_delete.genres.clear()
+        db.session.delete(book_to_delete)
         db.session.commit()
 
-        if image:
-            os.remove(path_to_img)
-    except:
+        if cover_image:
+            os.remove(image_path)
+    except Exception:
         flash('Ошибка при удалении книги.', 'warning')
         return redirect(url_for('index'))
 
     flash('Книга успешно удалена.', 'success')
     return redirect(url_for('index'))
 
-
 @book_bp.route('/<int:book_id>/create_review', methods=['POST'])
 @login_required
 @check_rights('read_book')
 def create_review(book_id):
-    check_review = Review.query.filter_by(book_id=book_id, user_id=current_user.id).first()
-    print(check_review, '--------------------------------------------------------')
-    if check_review:
+    existing_review = Review.query.filter_by(book_id=book_id, user_id=current_user.id).first()
+    print(existing_review,)
+    if existing_review:
         flash('Вы уже оставили отзыв.', 'danger')
     else:
         try:
-            review = Review()
-            review.rating = request.form.get('review-rating')
-            review.text = bleach.clean(request.form.get('review-text'))
-            review.book_id = book_id
-            review.user_id = current_user.id
-
-            db.session.add(review)
+            new_review = Review(
+                rating=request.form.get('review-rating'),
+                text=bleach.clean(request.form.get('review-text')),
+                book_id=book_id,
+                user_id=current_user.id
+            )
+            
+            db.session.add(new_review)
             db.session.commit()
 
             flash('Рецензия отправлена.', 'success')
             return redirect(url_for('books.show', book_id=book_id))
-        except:
+        except Exception:
             db.session.rollback()
             flash('При создании рецензии возникла ошибка. Проверьте корректность введённых данных.', 'warning')
             return redirect(url_for('books.show', book_id=book_id))
-    return redirect(url_for('books.show', book_id=book_id))
-    
 
+    return redirect(url_for('books.show', book_id=book_id))

@@ -28,7 +28,6 @@ init_login_manager(app)
 
 @app.route('/')
 def index():
-    # Get query parameters from GET request
     title = request.args.get('title', None)
     genres = request.args.getlist('genre')
     years = request.args.getlist('year')
@@ -36,10 +35,8 @@ def index():
     volume_to = request.args.get('volume_to', None)
     author = request.args.get('author', None)
 
-    # Base query
     query = Book.query
 
-    # Apply filters based on provided parameters
     if title:
         query = query.filter(func.lower(Book.name).like(f"%{title.lower()}%"))
     if genres:
@@ -53,14 +50,12 @@ def index():
     if author:
         query = query.filter(func.lower(Book.author).like(f"%{author.lower()}%"))
 
-    # Pagination
     page = request.args.get('page', 1, type=int)
     per_page = 10
     pagination = query.paginate(page=page, per_page=per_page)
     books = pagination.items
 
-    # Get all genres and years for multi-select fields in the search form
-    all_genres = Category.query.all()  # Adjust Category query as per your model
+    all_genres = Category.query.all() 
     all_years = db.session.query(Book.publisher_year).distinct().all()
 
     genres = [genre.name for genre in all_genres]
